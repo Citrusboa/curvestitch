@@ -1,0 +1,26 @@
+Function shadeArea() As Variant
+    Dim tempArray As Variant
+    ReDim tempArray(1 To 2)
+    
+    Dim rng As Range, area As Range, topLeft As Integer, width As Integer, height As Integer
+    Dim start As Integer
+    
+    start = 2
+    width = 13
+    height = 25
+    Set rng = Range("A1").CurrentRegion
+    rng.Select
+    topLeft = rng.Columns.count + start
+    MsgBox topLeft
+    
+    Set area = Range(Cells(start, topLeft), Cells(start + height, topLeft + width))
+    area.Select
+    area.Style = "20% - Accent6"
+    
+    tempArray(1) = start + height
+    tempArray(2) = topLeft
+    
+    Cells(tempArray(1), tempArray(2)).Select
+    shadeArea = tempArray
+    
+End Function
