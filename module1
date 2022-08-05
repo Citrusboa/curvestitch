@@ -1,0 +1,263 @@
+Sub Cyan()
+    ' Cells.Interior.ColorIndex = 17
+    Dim bottomLeft As Variant
+    Dim referenceCell(1 To 2) As Integer
+    bottomLeft = shadeArea()
+    referenceCell(1) = bottomLeft(1) + 3
+    referenceCell(2) = bottomLeft(2) + 1
+    
+    formatInput (Cells(referenceCell(1), referenceCell(2)))
+    
+    selectDataUserForm.row = referenceCell(1)
+    selectDataUserForm.column = referenceCell(2) + 1
+    selectDataUserForm.Show
+    
+    Dim xPos As Integer, yPos As Integer
+    xPos = Cells(referenceCell(1), referenceCell(2) + 1).Value
+    yPos = Cells(referenceCell(1) + 1, referenceCell(2) + 1).Value
+    
+    Dim wsChart As Worksheet
+    Set wsChart = ActiveSheet
+    wsChart.Activate
+    Dim chart As chart
+
+    ' Adding Blade Data Series
+    
+    Range(Range(Cells(, xPos), Cells(, xPos).End(xlDown)), Range(Cells(, yPos), Cells(, yPos).End(xlDown))).Select
+    wsChart.Shapes.AddChart2(240, xlXYScatterLinesNoMarkers).Select
+    Set chart = ActiveChart
+    
+    
+    ' rangeString = Cells(2, xPos).AddressLocal & ":" & Cells(2, xPos).End(xlDown).AddressLocal
+    ' rangeString2 = Cells(2, yPos).AddressLocal & ":" & Cells(2, yPos).End(xlDown).AddressLocal
+    
+
+    xPosUserForm.row = referenceCell(1)
+    xPosUserForm.column = referenceCell(2) + 4
+    xPosUserForm.Show
+    
+    Dim x_min As Double, x_max As Double
+    x_min = Cells(referenceCell(1), referenceCell(2) + 4).Value
+    x_max = Cells(referenceCell(1) + 1, referenceCell(2) + 4).Value
+    
+    segmentNumUserForm.row = referenceCell(1)
+    segmentNumUserForm.column = referenceCell(2) + 7
+    segmentNumUserForm.Show
+    
+    Dim segNum As Integer
+    segNum = Cells(referenceCell(1), referenceCell(2) + 7).Value
+    
+    Dim rng As Range
+    Set rng = Range(Cells(, xPos), Cells(, xPos).End(xlDown))
+    
+    MsgBox "x_min: " & x_min & vbNewLine & "x_max: " & x_max
+    
+    ' Set Scaling on Graph Object
+    chart.Axes(xlCategory).Select
+    chart.Axes(xlCategory).MinimumScale = x_min
+    chart.Axes(xlCategory).MaximumScale = x_max
+    Application.CommandBars("Format Object").Visible = False
+    
+    Dim i As Long, j As Long, segs As Long, counter As Long, p1 As Long, p2 As Long, p3 As Long
+    Dim test As Integer, overlay As Integer, overlaps As Integer
+    Dim testrng As Range
+    Dim x As Double, y As Double, xy As Double, x2 As Double, y2 As Double
+    Dim x2y As Double, xy2 As Double, x3 As Double, y3 As Double, offset As Double
+    
+    offset = 0.25
+    overlaps = 2
+    
+    If (segNum > 0) And (segNum < 20) Then
+        Dim interval As Double
+        interval = (x_max - x_min) / segNum
+        
+        For segs = 1 To segNum
+            
+            For overlay = 1 To overlaps
+                'First calculate the x_min and x_max for each segment
+                'Find summation of variables and p1, p2, p3 for each segment, dump rM
+                'Set up point array for Matrix and fill point values under segment
+                'Plot Circle Points
+                'Add New Line Section
+                
+                counter = 0
+                x = 0
+                y = 0
+                xy = 0
+                x2 = 0
+                y2 = 0
+                x2y = 0
+                xy2 = 0
+                x3 = 0
+                y3 = 0
+                
+                For i = 1 To rng.count
+                    If Cells(i, yPos).Value > 0 And Cells(i, xPos).Value >= (x_min + interval * (segs - 1) + offset * (overlay - 1)) _
+                        And Cells(i, xPos).Value <= (x_min + interval * segs + offset * (overlay - 1)) _
+                    Then
+                        counter = counter + 1
+                        x = x + Cells(i, xPos).Value
+                        y = y + Cells(i, yPos).Value
+                        xy = xy + Cells(i, xPos).Value * Cells(i, yPos).Value
+                        x2 = x2 + Cells(i, xPos).Value ^ 2
+                        y2 = y2 + Cells(i, yPos).Value ^ 2
+                        x2y = x2y + (Cells(i, xPos).Value ^ 2) * Cells(i, yPos).Value
+                        xy2 = xy2 + Cells(i, xPos).Value * (Cells(i, yPos).Value ^ 2)
+                        x3 = x3 + Cells(i, xPos).Value ^ 3
+                        y3 = y3 + Cells(i, yPos).Value ^ 3
+                        
+                        If (counter = 1) Then p1 = i
+                    End If
+                Next i
+                
+                p3 = counter + p1
+                p2 = (p3 + p1) / 2
+                
+                ' Declare New Array of 3 points
+                Dim Point(1 To 3, 1 To 2) As Double
+                    ' x1, y1
+                    ' x2, y2
+                    ' x3, y3
+                Point(1, 1) = Cells(p1, xPos)
+                Point(1, 2) = Cells(p1, yPos)
+                Point(2, 1) = Cells(p2, xPos)
+                Point(2, 2) = Cells(p2, yPos)
+                Point(3, 1) = Cells(p3, xPos)
+                Point(3, 2) = Cells(p3, yPos)
+                
+                ' should I print the values of the 3 points? I don't want to
+                
+                ' Circle Fitting with 3 Points
+                Dim A As Double, B As Double, C As Double, D As Double, E As Double
+                Dim aM As Double, bM As Double, rM As Double
+                
+                A = counter * x2 - x ^ 2
+                B = counter * xy - x * y
+                C = counter * y2 - y ^ 2
+                D = 0.5 * (counter * xy2 - x * y2 + counter * x3 - x * x2)
+                E = 0.5 * (counter * x2y - y * x2 + counter * y3 - y * y2)
+                aM = (D * C - B * E) / (A * C - B ^ 2)
+                bM = (A * E - B * D) / (A * C - B ^ 2)
+                
+                For i = 1 To rng.count
+                    If Cells(i, yPos).Value > 0 And Cells(i, xPos).Value >= (x_min + interval * (segs - 1) + offset * (overlay - 1)) _
+                        And Cells(i, xPos).Value <= (x_min + interval * segs + offset * (overlay - 1)) _
+                    Then
+                        rM = rM + (Sqr((Cells(i, xPos).Value - aM) ^ 2 + (Cells(i, yPos).Value - bM) ^ 2)) / counter
+                    End If
+                Next i
+                
+                MsgBox "Segment " & segs & " Point 1: " & p1 & " Point 2: " & p2 & " Point 3: " & p3
+                Cells(referenceCell(1) + 7, referenceCell(2) + 2 + 5 * (segs - 1) + (overlay - 1)).Value = rM
+                
+                'Set up matrix for 3 point circle array
+                
+                Dim Matrix(1 To 3, 1 To 4) As Double
+                For i = 1 To 3
+                    For j = 1 To 4
+                        If (j = 1) Then
+                            Matrix(i, j) = Point(i, 1) ^ 2 + Point(i, 2) ^ 2
+                        ElseIf (j = 2) Then
+                            Matrix(i, j) = Point(i, 1)
+                        ElseIf (j = 3) Then
+                            Matrix(i, j) = Point(i, 2)
+                        Else
+                            Matrix(i, j) = 1
+                        
+                        End If
+                        Cells(referenceCell(1) + 12 + (i - 1) + 4 * (overlay - 1), _
+                              referenceCell(2) + (j - 1) + 5 * (segs - 1)) = Matrix(i, j)
+                    Next j
+                Next i
+                
+                Dim xc As Double, yc As Double, r3 As Double
+                
+                xc = 0.5 * Minor(Matrix, 2) / Minor(Matrix, 1)
+                yc = -1 * 0.5 * Minor(Matrix, 3) / Minor(Matrix, 1)
+                r3 = Sqr(xc ^ 2 + yc ^ 2 + Minor(Matrix, 4) / Minor(Matrix, 1))
+                MsgBox "r3^2 = " & r3 ^ 2 & vbNewLine _
+                     & "xc ^ 2 = " & xc ^ 2 & vbNewLine _
+                     & "yc ^ 2 = " & yc ^ 2 & vbNewLine
+                
+                Cells(referenceCell(1) + 8, referenceCell(2) + 2 + 5 * (segs - 1) + (overlay - 1)) = xc
+                Cells(referenceCell(1) + 9, referenceCell(2) + 2 + 5 * (segs - 1) + (overlay - 1)) = yc
+                Cells(referenceCell(1) + 10, referenceCell(2) + 2 + 5 * (segs - 1) + (overlay - 1)) = r3
+                
+                ' Clear Existing Data
+                Set testrng = Range(Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 5 * (segs - 1) + 2 * (overlay - 1)), _
+                                    Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 1 + 5 * (segs - 1) + 2 * (overlay - 1)).End(xlDown))
+                testrng.Select
+                testrng.clearContents
+                
+                ' Plot Circle Points and Draw circle Arc
+                Dim i1 As Double, j1 As Double, comp As Double
+                i1 = x_min + interval * (segs - 1) + offset * (overlay - 1)
+                
+                Do While i1 <= x_min + interval * segs + offset * (overlay - 1)
+                    If (yc > 0) Then
+                    
+                        j1 = yc - Sqr(r3 ^ 2 - (i1 - xc) ^ 2)
+                    Else
+                        j1 = yc + Sqr(r3 ^ 2 - (i1 - xc) ^ 2)
+                    End If
+                    If (i1 = x_min + interval * (segs - 1) + offset * (overlay - 1)) Then
+                        comp = j1 - Point(1, 2)
+                    End If
+                    Cells(referenceCell(1) + 13 + 4 * overlaps + 10 * (i1 - (x_min + interval * (segs - 1) + offset * (overlay - 1))), _
+                           referenceCell(2) + 5 * (segs - 1) + 2 * (overlay - 1)).Value = i1
+                    Cells(referenceCell(1) + 13 + 4 * overlaps + 10 * (i1 - (x_min + interval * (segs - 1) + offset * (overlay - 1))), _
+                           referenceCell(2) + 1 + 5 * (segs - 1) + 2 * (overlay - 1)).Value = j1 - comp
+                    
+                    i1 = i1 + 0.1
+                Loop
+                
+                MsgBox "Compensation" & comp
+                
+                ' Add New Line Series
+                
+                With chart.SeriesCollection.NewSeries
+                rangeString = Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 5 * (segs - 1) + 2 * (overlay - 1)).AddressLocal & ":" & _
+                              Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 5 * (segs - 1) + 2 * (overlay - 1)).End(xlDown).AddressLocal
+                    .XValues = "=" & ActiveSheet.Name & "!" & rangeString
+                rangeString = Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 1 + 5 * (segs - 1) + 2 * (overlay - 1)).AddressLocal & ":" & _
+                              Cells(referenceCell(1) + 13 + 4 * overlaps, referenceCell(2) + 1 + 5 * (segs - 1) + 2 * (overlay - 1)).End(xlDown).AddressLocal
+                    .Values = "=" & ActiveSheet.Name & "!" & rangeString
+                    .Name = "newseries" & CStr(segs)
+                End With
+                
+            Next overlay
+        Next segs
+    Else
+        MsgBox "Invalid segment numbers. Must be integer between 0 and 20."
+    End If
+         
+End Sub
+
+Sub formatInput(refCell As Range)
+    Dim selection As Range
+    
+    refCell.Select
+    ActiveCell.FormulaR1C1 = "x Data"
+    refCell.offset(1, 0).Select
+    ActiveCell.FormulaR1C1 = "y Data"
+    Set selection = Range(refCell, refCell.offset(1, 1))
+    selection.Select
+    selection.Style = "20% - Accent6"
+    
+    refCell.offset(0, 3).Select
+    ActiveCell.FormulaR1C1 = "xmin"
+    refCell.offset(1, 3).Select
+    ActiveCell.FormulaR1C1 = "ymin"
+    Set selection = Range(refCell.offset(0, 3), refCell.offset(1, 4))
+    selection.Select
+    selection.Style = "20% - Accent6"
+    
+    refCell.offset(0, 6).Select
+    ActiveCell.FormulaR1C1 = "Segments"
+    Set selection = Range(refCell.offset(0, 6), refCell.offset(1, 7))
+    selection.Select
+    selection.Style = "20% - Accent6"
+    Application.CutCopyMode = False
+            
+End Sub
+
